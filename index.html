@@ -1,0 +1,247 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html style="height:100%">
+	<head>
+		<title>Investment Value Calculator</title>
+		<link rel="stylesheet" href="css/index.css">
+		<script type="text/javascript" src="js/fundList.js"></script>
+		<script type="text/javascript" src="js/fundNavData.js"></script>
+		<script type="text/javascript" src="js/excelXIRR.js"></script>
+		<script>
+			var investmentsCount = 1;
+			var fundHistoryMap = {};
+			var calcCurrVal = function(){
+				fundHistoryMap = {};
+				var hasError = false;
+				document.getElementById('errorText').style.display = 'none';
+				var investCnt = document.getElementById('investmentsDiv').children.length;
+				var currInvestVal = 0;
+				for(var i = 0;i <investCnt; i++){
+					var elemIndex = document.getElementById('investmentsDiv').children[i].id.split('investmentDiv')[1];
+					var investAmt = parseFloat(document.getElementById('invesmentAmount'+elemIndex).value);
+					var investDate = document.getElementById('invesmentDate'+elemIndex).value;
+					var investFund = document.getElementById('fundTypes'+elemIndex).value;
+					if(fundHistoryMap.hasOwnProperty(investFund))
+						fundHistoryMap[investFund].purchaseHist.push({Date:investDate,Flow: investAmt *(-1)});
+					else{
+						fundHistoryMap[investFund] = {
+							'returnVal':0,
+							'purchaseHist':[]
+						};
+						fundHistoryMap[investFund].purchaseHist.push({Date:investDate,Flow: investAmt*(-1)});
+					}
+					if(fundNavData[investFund+'#'+investDate]){
+						var buyNAVValue = parseFloat(fundNavData[investFund+'#'+investDate]);
+						var numOfUnits = investAmt/buyNAVValue;
+						var currNAVValue = parseFloat(fundNavData[investFund+'#2019-03-19']);
+						currInvestVal += (currNAVValue * numOfUnits);
+						fundHistoryMap[investFund].returnVal = fundHistoryMap[investFund].returnVal + (currNAVValue * numOfUnits);
+						console.log(fundHistoryMap[investFund].returnVal + "," + investFund);
+						//console.log(ExcelFormulas.XIRR([{Flow:investAmt *(-1),Date:investDate},{Flow:(currNAVValue * numOfUnits),Date:"2019-03-19"}]));
+						//console.log(ExcelFormulas.XIRR([{Flow:-10000,Date:"1/24/2012"},{Flow:12000,Date:"6/27/2016"}]));
+					}else{
+						hasError = true;
+						document.getElementById('errorText').style.display = 'block';
+						document.getElementById('errorText').innerText = 'NAV value not found for the selected fund(s) for the given date';
+						currInvestVal = '';
+						break;
+					}
+				}
+				var tableElem = document.getElementById("summary");
+				var len = document.getElementsByClassName('tabRowElem').length;
+				for(var i=0;i<len;i++){
+					tableElem.removeChild(document.getElementsByClassName('tabRowElem')[0]);
+				}
+				for(var key in fundHistoryMap){
+					if(fundHistoryMap.hasOwnProperty(key)){
+						console.log('Total Returns for fund id -' + fundHistoryMap[key].returnVal);
+						var arr = fundHistoryMap[key].purchaseHist;
+						arr.sort(function(a,b){
+							return new Date(a.Date) - new Date(b.Date);
+						});
+						fundHistoryMap[key].purchaseHist = arr;
+						console.log("sorted array",arr);
+						fundHistoryMap[key].purchaseHist.push({Date:"2019-03-19",Flow:fundHistoryMap[key].returnVal});
+						console.log('XIRR for fund id -' + ExcelFormulas.XIRR(fundHistoryMap[key].purchaseHist) * 100);
+						var fundName = fundIdMap[key];
+						var tabRow = document.createElement("tr");
+						tabRow.className = "tabRowElem";
+						var tabCell1 = document.createElement("td");
+						tabCell1.style.width = "60%";
+						tabCell1.style.textAlign = "center";
+						tabCell1.innerText = fundName;
+						var tabCell2 = document.createElement("td");
+						tabCell2.style.width = "20%";
+						tabCell2.style.textAlign = "center";
+						tabCell2.innerText = fundHistoryMap[key].returnVal;
+						var tabCell3 = document.createElement("td");
+						tabCell3.style.width = "20%";
+						tabCell3.style.textAlign = "center";
+						tabCell3.innerText = (ExcelFormulas.XIRR(fundHistoryMap[key].purchaseHist)*100);
+						tabRow.appendChild(tabCell1);
+						tabRow.appendChild(tabCell2);
+						tabRow.appendChild(tabCell3);
+						tableElem.appendChild(tabRow);
+					}
+				}
+				document.getElementById('invSummary').style.display="flex";
+				document.getElementById('currInvestmentVal').value = currInvestVal;
+			}
+			var setValues  = function(){
+				var fundSelectElem = document.getElementById('fundTypes0');
+				fundList.map(function(elem,index){
+					var option = document.createElement('option');
+					option.text = elem.label;
+					option.value = elem.id;
+					fundSelectElem.appendChild(option);
+				});
+			}
+			var removeInvestmentsDiv = function(index){
+				var parentElem = document.getElementById('investmentsDiv');
+				var childElem = document.getElementById('investmentDiv'+index);
+				parentElem.removeChild(childElem);
+			}
+			var formInvestmentsDiv = function(){
+				var currIndex = investmentsCount;
+				var divElem = document.createElement('div');
+				divElem.className = 'investments-div-unit';
+				divElem.id = 'investmentDiv' + investmentsCount;
+				var childDiv1 = document.createElement('div');
+				childDiv1.className="flex-div flex-align-items-center margin-small";
+				var childDiv11 = document.createElement('div');
+				childDiv11.className = 'flex-item-div minor-div';
+				var labelDiv1 = document.createElement('label');
+				labelDiv1.for = 'fundTypes' + investmentsCount;
+				labelDiv1.innerText = 'Select Fund';
+				childDiv11.append(labelDiv1);
+				var childDiv12 = document.createElement('div');
+				childDiv12.className = 'flex-item-div major-div';
+				var selectElem = document.createElement('select');
+				fundList.map(function(elem,index){
+					var option = document.createElement('option');
+					option.text = elem.label;
+					option.value = elem.id;
+					selectElem.appendChild(option);
+				});
+				selectElem.id = 'fundTypes' + investmentsCount;
+				childDiv12.appendChild(selectElem);
+				childDiv1.appendChild(childDiv11);
+				childDiv1.appendChild(childDiv12);
+				var childDiv2 = document.createElement('div');
+				childDiv2.className="flex-div flex-align-items-center margin-small";
+				var childDiv21 = document.createElement('div');
+				childDiv21.className = 'flex-item-div minor-div';
+				var labelDiv2 = document.createElement('label');
+				labelDiv2.for = 'invesmentDate' + investmentsCount;
+				labelDiv2.innerText = 'Investment Date';
+				childDiv21.append(labelDiv2);
+				var childDiv22 = document.createElement('div');
+				childDiv22.className = 'flex-item-div major-div';
+				var inputDateElem = document.createElement('input');
+				inputDateElem.type = 'date';
+				inputDateElem.min = '2015-04-01';
+				inputDateElem.id = 'invesmentDate' + investmentsCount;
+				childDiv22.appendChild(inputDateElem);
+				childDiv2.appendChild(childDiv21);
+				childDiv2.appendChild(childDiv22);
+				var childDiv3 = document.createElement('div');
+				childDiv3.className="flex-div flex-align-items-center margin-small";
+				var childDiv31 = document.createElement('div');
+				childDiv31.className = 'flex-item-div minor-div';
+				var labelDiv3 = document.createElement('label');
+				labelDiv3.for = 'invesmentAmount' + investmentsCount;
+				labelDiv3.innerText = 'Investment Amount';
+				childDiv31.append(labelDiv3);
+				var childDiv32 = document.createElement('div');
+				childDiv32.className = 'flex-item-div major-div';
+				var inputElem = document.createElement('input');
+				inputElem.type = 'text';
+				inputElem.id = 'invesmentAmount' + investmentsCount;
+				childDiv32.appendChild(inputElem);
+				childDiv3.appendChild(childDiv31);
+				childDiv3.appendChild(childDiv32);
+				var childDiv4 = document.createElement('div');
+				childDiv4.className = 'flex-div flex-align-items-center flex-justify-content-center cursor-pointer margin-small';
+				var buttonElem = document.createElement('button');
+				buttonElem.id = 'removeInvestments' + investmentsCount;
+				buttonElem.innerText = 'Remove Fund';
+				buttonElem.onclick = function(){
+					removeInvestmentsDiv(currIndex);
+				}
+				childDiv4.appendChild(buttonElem);
+				divElem.appendChild(childDiv1);
+				divElem.appendChild(childDiv2);
+				divElem.appendChild(childDiv3);
+				divElem.appendChild(childDiv4);
+				document.getElementById('investmentsDiv').append(divElem);
+				investmentsCount++;
+			}
+		</script>
+	</head>
+	<body style="height:100%" onload="setValues()">
+		<div class="full-height flex-div flex-justify-content-center flex-align-items-center">
+			<div class="panel-class flex-column" style="min-height:50vh;max-height:80vh;overflow-y:auto;width:80vw;padding:10px">
+				<h4 style="text-align:center">
+					<span>Investment Calculator</span>
+				</h4>
+				<div id="investmentsDiv" class="flex-1">
+					<div class="investments-div-unit" id="investmentDiv0">
+						<div class="flex-div flex-align-items-center margin-small">
+							<div class="flex-item-div minor-div">
+								<label for="fundTypes">Select Fund</label>
+							</div>
+							<div class="flex-item-div major-div">
+								<select id="fundTypes0" required="true"></select>
+							</div>
+						</div>
+						<div class="flex-div flex-align-items-center margin-small">
+							<div class="flex-item-div minor-div">
+								<label for="invesmentDate">Investment Date</label>
+							</div>
+							<div class="flex-item-div major-div">
+								<input id="invesmentDate0" type="date" min="2015-04-01" required="true"/>
+							</div>
+						</div>
+						<div class="flex-div flex-align-items-center margin-small">
+							<div class="flex-item-div minor-div">
+								<label for="invesmentAmount">Investment Amount</label>
+							</div>
+							<div class="flex-item-div major-div">
+								<input id="invesmentAmount0" type="text" required="true"/>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="flex-div flex-align-items-center" style="margin:5px">
+					<div class="flex-item-div" style="width:30%;text-align:right;padding-right:5px">
+						<label for="currInvestmentVal">Current Investment Value</label>
+					</div>
+					<div class="flex-item-div" style="width:70%;">
+						<input id="currInvestmentVal" type="text" disabled/>
+					</div>
+				</div>
+				<br/>
+				<div class="flex-div flex-align-items-center flex-justify-content-center cursor-pointer" style="margin:5px;">
+					<button onclick="calcCurrVal()" style="margin-right:5px">Calculate</button>
+					<button onclick="formInvestmentsDiv()" style="margin-right:5px">Add Fund</button>
+				</div>
+				<div class="flex-div flex-align-items-center flex-justify-content-center cursor-pointer" style="margin:5px;">
+					<span id="errorText" style="color:red"></button>
+				</div>
+				<div id="invSummary" class="flex-div flex-justify-content-center" style="display:none">
+					<div class="panel-class" style="width:75vw">
+						<h4 style="text-align:center">
+							<span>Investment Summary</span>
+						</h4>
+						<table id="summary" style= "width:100%;padding:5px">
+							<tr style="border-bottom:1px solid #e0e1e1">
+								<th style="width:60%;border-bottom:1px solid #e0e1e1">Mutual Fund Name</th>
+								<th style="width:20%;border-bottom:1px solid #e0e1e1">Current Value</th>
+								<th style="width:20%;border-bottom:1px solid #e0e1e1">XIRR (%)</th>
+							</tr>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

@@ -1,0 +1,62 @@
+body{
+	margin:0px;
+}
+
+.full-height{
+	height: 100%
+}
+
+.flex-div{
+	display: flex;
+}
+
+.flex-justify-content-center{
+	justify-content:center;
+}
+
+.flex-align-items-center{
+	align-items:center;
+}
+
+.panel-class{
+	border: 1px solid #e0e1e1;
+	box-shadow: 1px 1px 20px 2px #e0e1e1;
+	border-radius: 30px;
+}
+
+.investments-div-unit{
+	padding:5px;
+	border-bottom:1px solid #e0e1e1;
+}
+
+.margin-small{
+	margin: 5px;
+}
+
+.minor-div{
+	width:30%;
+	text-align:right;
+	padding-right:5px
+}
+
+.major-div{
+	width:70%;
+}
+
+.flex-item-div{
+	display: flex-item;
+}
+
+.cursor-pointer{
+	cursor: pointer;
+}
+
+.flex-column{
+	display: flex;
+	flex-direction: column;
+}
+
+.flex-1{
+	flex:1;
+	overflow-y:auto;
+}
